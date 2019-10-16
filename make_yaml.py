@@ -15,7 +15,7 @@ import glob
 import subprocess
 from collections import defaultdict
 
-def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_name,pipeline_type):
+def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_name):
 	# dictionary to hold yaml
 	yaml_dict = {}
 	yaml_dict['samples'] = []
