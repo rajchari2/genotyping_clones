@@ -25,6 +25,8 @@ def genotype_sample(bam_file,variant_list,output_file):
 	# read the sorted bam file
 	samfile = pysam.AlignmentFile(bam_file,"rb")
 	sample_name = bam_file.name
+	sample_name = sample_name.replace('processed/','')
+	sample_name = sample_name.replace('_bwamem_sorted.bam','')
 
 	# parse variant list
 	var_list = variant_list.split(',')

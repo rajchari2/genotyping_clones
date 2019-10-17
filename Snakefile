@@ -96,7 +96,7 @@ rule visualize_plate:
 	output:
 		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png'
 	shell:
-		'bio96 -o {output.plate_map} genotype {input.toml_file}'
+		'bio96 -o {output.plate_map} {input.toml_file}'
 
 rule genotype_all:
 	input:

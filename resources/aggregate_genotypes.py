@@ -20,14 +20,30 @@ from collections import Counter
 from operator import itemgetter
 
 def aggregate_files(input_file_list,toml_file):
+	# data structure
+	plate_data = defaultdict(dict)
 
 	# go through mutation file list
 	for infile in input_file_list:
 		ifile = open(infile,'r')
 		for line in ifile:
 			line = line.rstrip('\r\n')
-			toml_file.write(line + '\n')
+			parts = line.split('\t')
+			# parse sample name
+			sample_name_parts = parts[0].split('-')
+			plate = sample_name_parts[0]
+			well = sample_name_parts[1]
+			# initialize
+			if plate not in plate_data:
+				plate_data[plate] = defaultdict(float)
+			plate_data[plate][well] = int(round(float(parts[1])))
 		ifile.close()
+
+	# write to the toml file
+	for plate in plate_data:
+		toml_file.write('[plate.' +  plate + ']' + '\n')
+		for well in plate_data[plate]:
+			toml_file.write('  well.' + well + '.genotype=' + str(plate_data[plate][well]) + '\n')
 
 	# close file handles
 	toml_file.close()
