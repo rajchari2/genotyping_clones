@@ -13,6 +13,10 @@ sample_list = []
 reference_list = []
 sample_to_reference = defaultdict(str)
 sample_to_vars = defaultdict(str)
+sample_to_control = defaultdict(str)
+sample_to_target_site = defaultdict(str)
+sample_to_expt_type = defaultdict(str)
+
 for sample in samples:
 	for sample_name in sample:
 		sample_list.append(sample_name)
@@ -34,6 +38,9 @@ def get_control_sample(wildcards):
 
 def get_variants(wildcards):
 	return sample_to_vars[wildcards.sample]
+
+def get_expt_type(wildcards):
+	return sample_to_expt_type[wildcards.sample]
 
 # rules for genotyping
 rule bwa_mem:
@@ -76,11 +83,12 @@ rule count_variants:
 		sorted_bam = rules.samtools_sort.output.sorted_bam,
 		bam_index = rules.bam_index.output.bai
 	params:
-		variant_list = get_variants
+		variant_list = get_variants,
+		expt_type = get_expt_type
 	output:
 		var_file = 'output/{sample}_variant_summary.tab'
 	shell:
-		'python resources/genotype_sample.py -i {input.sorted_bam} -v {params.variant_list} -o {output.var_file}'
+		'python resources/genotype_sample.py -i {input.sorted_bam} -e {params.expt_type} -v {params.variant_list} -o {output.var_file}'
 
 rule generate_toml_file:
 	input:

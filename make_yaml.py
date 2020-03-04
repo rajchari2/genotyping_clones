@@ -2,6 +2,17 @@
 # updated 09/18/18 to compute control subtracted rates
 
 # input file: [tab-delimited - sample name {tab} reference file {tab} target site {tab} control_sample
+# in the following order
+# Sample name: in the format of 'Plate-Well-Gene'
+# Reference file: reference sequence of the amplicon being sequenced
+# sgRNA target site: target site for the CRISPR experiment
+# Experiment type: HDR/KO
+# if HDR: variants (semicolon delimited, no spaces), else NA
+# Control sample: PCR product from an untreated sample (or appropriate control)
+
+
+
+
 # output file: yaml file which can run in the pipeline
 
 # input file for genotyping: sample name {tab} reference {SNP diffs ; delimited A1008T}
@@ -30,14 +41,20 @@ def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_na
 		# variables to store fields
 		sample_name = parts[0]
 		reference_file = parts[1]
-		variant_list = parts[2]
+		target_site = parts[2]
+		expt_type = parts[3]
+		variant_list = parts[4]
+		control_sample = parts[5]
 
 		# save to the yaml
 		sample_dict = {}
 		sample_dict[sample_name] = {}
 		sample_dict[sample_name]['name'] = sample_name
 		sample_dict[sample_name]['reference'] = reference_file
+		sample_dict[sample_name]['target_site'] = target_site
+		sample_name[sample_name]['expt_type'] = expt_type
 		sample_dict[sample_name]['variants'] = variant_list
+		sample_dict[sample_name]['control'] = control_sample
 
 		# add to yaml dict
 		yaml_dict['samples'].append(sample_dict)
