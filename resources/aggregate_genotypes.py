@@ -31,7 +31,7 @@ def aggregate_files(input_file_list,toml_file):
 			parts = line.split('\t')
 			# parse sample name
 			sample_name_parts = parts[0].split('-')
-			plate = sample_name_parts[0]
+			plate = sample_name_parts[0] + sample_name_parts[2]
 			well = sample_name_parts[1]
 			# initialize
 			if plate not in plate_data:
