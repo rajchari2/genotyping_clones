@@ -101,10 +101,12 @@ rule generate_toml_file:
 rule visualize_plate:
 	input:
 		toml_file = rules.generate_toml_file.output.toml_file
+	params:
+		color = 'Greys'
 	output:
 		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png'
 	shell:
-		'bio96 -o {output.plate_map} {input.toml_file}'
+		'bio96 -o {output.plate_map} {input.toml_file} -c {params.color}'
 
 rule genotype_all:
 	input:
