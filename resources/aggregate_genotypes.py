@@ -36,7 +36,7 @@ def aggregate_files(input_file_list,toml_file):
 			# initialize
 			if plate not in plate_data:
 				plate_data[plate] = defaultdict(float)
-			plate_data[plate][well] = int(round(float(parts[1])))
+			plate_data[plate][well] = float(parts[1])
 		ifile.close()
 
 	# write to the toml file
