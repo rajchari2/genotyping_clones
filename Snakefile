@@ -28,6 +28,7 @@ for sample in samples:
 		sample_to_vars[sample_name] = sample[sample_name]['variants']
 		sample_to_expt_type[sample_name] = sample[sample_name]['expt_type']
 		sample_to_control[sample_name] = sample[sample_name]['control']
+		sample_to_target_site[sample_name] = sample[sample_name]['target_site']
 		control_sample = sample[sample_name]['control']
 		if control_sample not in control_list:
 			control_list.append(control_sample)
@@ -92,11 +93,13 @@ rule count_variants:
 	params:
 		variant_list = get_variants,
 		expt_type = get_expt_type,
-		control = get_control_sample
+		control = get_control_sample,
+		reference_file = get_reference,
+		target_site = get_target_site
 	output:
 		var_file = 'output/{sample}_variant_summary.tab'
 	shell:
-		'python resources/genotype_sample.py -i {input.sorted_bam} -c {params.control} -e {params.expt_type} -v {params.variant_list} -o {output.var_file}'
+		'python resources/genotype_sample.py -i {input.sorted_bam} -c {params.control} -e {params.expt_type} -v {params.variant_list} -o {output.var_file} -r {params.reference_file} -t {params.target_site}'
 
 rule generate_toml_file:
 	input:
