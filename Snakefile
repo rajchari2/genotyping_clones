@@ -11,6 +11,7 @@ cell_type = config["cell_type"]
 ngs_run = config["ngs_run"]
 sample_list = []
 reference_list = []
+control_list = []
 sample_to_reference = defaultdict(str)
 sample_to_vars = defaultdict(str)
 sample_to_control = defaultdict(str)
@@ -25,6 +26,12 @@ for sample in samples:
 			reference_list.append(ref_file)
 		sample_to_reference[sample_name] = 'db/' + ref_file
 		sample_to_vars[sample_name] = sample[sample_name]['variants']
+		sample_to_expt_type[sample_name] = sample[sample_name]['expt_type']
+		sample_to_control[sample_name] = sample[sample_name]['control']
+		control_sample = sample[sample_name]['control']
+		if control_sample not in control_list:
+			control_list.append(control_sample)
+			sample_to_reference[control_sample] = 'db/' + ref_file
 
 # functions to get variables
 def get_reference(wildcards):
@@ -84,11 +91,12 @@ rule count_variants:
 		bam_index = rules.bam_index.output.bai
 	params:
 		variant_list = get_variants,
-		expt_type = get_expt_type
+		expt_type = get_expt_type,
+		control = get_control_sample
 	output:
 		var_file = 'output/{sample}_variant_summary.tab'
 	shell:
-		'python resources/genotype_sample.py -i {input.sorted_bam} -e {params.expt_type} -v {params.variant_list} -o {output.var_file}'
+		'python resources/genotype_sample.py -i {input.sorted_bam} -c {params.control} -e {params.expt_type} -v {params.variant_list} -o {output.var_file}'
 
 rule generate_toml_file:
 	input:
@@ -107,6 +115,15 @@ rule visualize_plate:
 		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png'
 	shell:
 		'bio96 -o {output.plate_map} {input.toml_file} -c {params.color}'
+
+rule build_controls:
+	input:
+		pileup_list = expand(rules.samtools_sort.output.sorted_bam,sample=control_list),
+		bais = expand(rules.bam_index.output.bai,sample=control_list)
+	output:
+		controls_created = project_name + '_' + ngs_run + '_Controls.tab'
+	shell:
+		'touch {output.controls_created}'
 
 rule genotype_all:
 	input:
