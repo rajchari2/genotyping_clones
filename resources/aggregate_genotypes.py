@@ -26,17 +26,24 @@ def aggregate_files(input_file_list,toml_file):
 	# go through mutation file list
 	for infile in input_file_list:
 		ifile = open(infile,'r')
+		line_count = 0
 		for line in ifile:
-			line = line.rstrip('\r\n')
-			parts = line.split('\t')
-			# parse sample name
-			sample_name_parts = parts[0].split('-')
-			plate = sample_name_parts[0] + sample_name_parts[2]
-			well = sample_name_parts[1]
-			# initialize
-			if plate not in plate_data:
-				plate_data[plate] = defaultdict(float)
-			plate_data[plate][well] = float(parts[1])
+			if line_count > 0:
+				line = line.rstrip('\r\n')
+				parts = line.split('\t')
+				# parse sample name
+				sample_name_parts = parts[0].split('-')
+				plate = sample_name_parts[0] + sample_name_parts[2]
+				well = sample_name_parts[1]
+				# initialize
+				if plate not in plate_data:
+					plate_data[plate] = defaultdict(float)
+				if parts[1]=='N/A':
+					value = 0.0
+				else:
+					value = float(parts[1])
+				plate_data[plate][well] = value
+			line_count += 1
 		ifile.close()
 
 	# write to the toml file

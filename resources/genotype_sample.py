@@ -80,7 +80,7 @@ def find_target_indices(target_site,reference_file):
 
 
 
-def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,output_file):
+def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site,reference_file,output_file):
 	# read the sorted bam file
 	samfile = pysam.AlignmentFile(bam_file,"rb")
 	# go through control file to determine "false" mutations
@@ -154,7 +154,7 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,output_file
 
 		# write header in output file
 		output_file.write('Sample\tNHEJ_Mutation_Rate\n')
-		for read in ctrl_sam.fetch():
+		for read in control_sam_file.fetch():
 			if read.cigarstring != None and 'S' not in read.cigarstring and 'H' not in read.cigarstring and int(read.reference_start)==0:
 				# check if the read has a mutation that involves the target sequence
 				md_tag = read.get_tag('MD')
@@ -204,12 +204,14 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,output_file
 def main(argv):
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument('-i','--sample_bam_file',type=argparse.FileType('r'),required=True)
-	parser.add_argument('-c','--control_bam_file',type=argparse.FileType('r'),required=True)
+	parser.add_argument('-c','--control_bam_file',required=True)
 	parser.add_argument('-e','--experiment_type',required=True)
 	parser.add_argument('-v','--variant_list',required=True)
+	parser.add_argument('-t','--target_site',required=True)
+	parser.add_argument('-r','--reference_file',required=True)
 	parser.add_argument('-o','--output_file',type=argparse.FileType('w'),required=True)
 	opts = parser.parse_args(argv)
-	genotype_sample(opts.sample_bam_file, opts.experiment_type, opts.variant_list, opts.output_file)
+	genotype_sample(opts.sample_bam_file, opts.control_bam_file, opts.experiment_type, opts.variant_list, opts.target_site, opts.reference_file, opts.output_file)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
