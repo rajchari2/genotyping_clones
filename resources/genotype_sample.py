@@ -30,19 +30,20 @@ def process_cigar(cigar_tuple,md_tag,aligned_pairs,query_qualities):
 			pos = int(seq_pos[0]) + 1
 			base = seq_pos[2]
 			if base.islower() and int(query_qualities[pos-1]) >= 20:
-				alt = str(pos) + ':' + str(pos) + ':SNP'
+				alt = str(pos) + ':' + str(pos) + ':0:SNP'
 				alterations.append(alt)
 	else:
 		for entry in cigar_tuple:
 			# match
+			length = int(entry[1])
 			if int(entry[0])==0:
 				pos = pos + int(entry[1])
 			elif int(entry[0])==1:
-				alt = str(pos) + ':' + str(pos) + ':Ins'
+				alt = str(pos) + ':' + str(pos) + ':' + str(length) + ':Ins'
 				alterations.append(alt)
 			elif int(entry[0])==2:
 				end_pos = pos + int(entry[1])
-				alt = str(pos) + ':' + str(end_pos) + ':Del'
+				alt = str(pos) + ':' + str(end_pos) + ':' + str(length) + ':Del'
 				pos = end_pos
 				alterations.append(alt)
 	return alterations
@@ -104,7 +105,7 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site
 
 			# coverage goes A, C, G, T
 			coverage_data = samfile.count_coverage(start=position-1, end=position)
-			coverage_data_ctrl =	control_sam_file.count_coverage(start=position-1, end=position)
+			coverage_data_ctrl = control_sam_file.count_coverage(start=position-1, end=position)
 
 			# count for each
 			a_count = int(coverage_data[0][0])
@@ -164,7 +165,7 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site
 				valid_alteration = False
 				if len(ctrl_alterations) > 0:
 					for alt in ctrl_alterations:
-						[start,end,alt_type] = alt.split(':')
+						[start,end,size,alt_type] = alt.split(':')
 						if ((int(start) >= target_start and int(start) <= target_end) or (int(end) >= target_start and int(end) <= target_end)):
 							valid_alteration = True
 				# check if valid alteration
@@ -184,10 +185,11 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site
 					# if alteration is non zero
 					valid_alteration = False
 					for alt in sample_alterations:
-						[start,end,alt_type] = alt.split(':')
-						if ((int(start) >= target_start and int(start) <= target_end) or (int(end) >= target_start and int(end) <= target_end)):
+						[start,end,size,alt_type] = alt.split(':')
+						if ((int(start) >= target_start and int(start) <= target_end) or (int(end) >= target_start and int(end) <= target_end)) and int(size) % 3 != 0:
 							valid_alteration = True
-					sample_mutation_count += 1
+					if valid_alteration==True:
+						sample_mutation_count += 1
 		if sample_read_total >= 100:
 			rate = (sample_mutation_count / sample_read_total) * 100
 		else:

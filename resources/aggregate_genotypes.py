@@ -19,9 +19,10 @@ from collections import defaultdict
 from collections import Counter
 from operator import itemgetter
 
-def aggregate_files(input_file_list,toml_file):
+def aggregate_files(input_file_list,toml_file,clone_list):
 	# data structure
 	plate_data = defaultdict(dict)
+	clone_list.write('Sample\tPercent_Disruption\n')
 
 	# go through mutation file list
 	for infile in input_file_list:
@@ -43,8 +44,12 @@ def aggregate_files(input_file_list,toml_file):
 				else:
 					value = float(parts[1])
 				plate_data[plate][well] = value
+				# write out clone list
+				if value >= 95:
+					clone_list.write(parts[0] + '\t' + str(value) + '\n')
 			line_count += 1
 		ifile.close()
+	clone_list.close()
 
 	# write to the toml file
 	for plate in plate_data:
@@ -58,9 +63,10 @@ def aggregate_files(input_file_list,toml_file):
 def main(argv):
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument('-i','--input_file_list',nargs='+',required=True)
+	parser.add_argument('-c','--clone_list',type=argparse.FileType('w'),required=True)
 	parser.add_argument('-o','--toml_file',type=argparse.FileType('w'),required=True)
 	opts = parser.parse_args(argv)
-	aggregate_files(opts.input_file_list,opts.toml_file)
+	aggregate_files(opts.input_file_list,opts.toml_file,opts.clone_list)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
