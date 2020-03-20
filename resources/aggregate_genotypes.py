@@ -19,10 +19,11 @@ from collections import defaultdict
 from collections import Counter
 from operator import itemgetter
 
-def aggregate_files(input_file_list,toml_file,clone_list):
+def aggregate_files(input_file_list,toml_file,aggregated_file,clone_list):
 	# data structure
 	plate_data = defaultdict(dict)
 	clone_list.write('Sample\tPercent_Disruption\n')
+	aggregated_file.write('Sample\tPercent_Disruption\n')
 
 	# go through mutation file list
 	for infile in input_file_list:
@@ -36,6 +37,8 @@ def aggregate_files(input_file_list,toml_file,clone_list):
 				sample_name_parts = parts[0].split('-')
 				plate = sample_name_parts[0] + sample_name_parts[2]
 				well = sample_name_parts[1]
+				# write to the aggregated output
+				aggregated_file.write(line + '\n')
 				# initialize
 				if plate not in plate_data:
 					plate_data[plate] = defaultdict(float)
@@ -64,9 +67,10 @@ def main(argv):
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument('-i','--input_file_list',nargs='+',required=True)
 	parser.add_argument('-c','--clone_list',type=argparse.FileType('w'),required=True)
+	parser.add_argument('-a','--aggregated_file',type=argparse.FileType('w'),required=True)
 	parser.add_argument('-o','--toml_file',type=argparse.FileType('w'),required=True)
 	opts = parser.parse_args(argv)
-	aggregate_files(opts.input_file_list,opts.toml_file,opts.clone_list)
+	aggregate_files(opts.input_file_list,opts.toml_file,opts.aggregated_file,opts.clone_list)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])
