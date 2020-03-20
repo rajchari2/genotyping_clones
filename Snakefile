@@ -124,9 +124,10 @@ rule generate_toml_file:
 		variant_file_list = expand(rules.count_variants.output.var_file,sample=sample_list)
 	output:
 		toml_file = 'final_output/' + project_name + '_' + ngs_run + '_genotyping.toml',
-		clone_list = 'final_output/' + project_name + '_' + ngs_run + '_clone_list.tab'
+		clone_list = 'final_output/' + project_name + '_' + ngs_run + '_clone_list.tab',
+		aggregated_output = 'final_output/' + project_name + '_' + ngs_run + '_aggregated.tab',
 	shell:
-		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -o {output.toml_file} -c {output.clone_list}'
+		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -o {output.toml_file} -c {output.clone_list} -a {output.aggregated_output}'
 
 rule visualize_plate:
 	input:
