@@ -30,6 +30,7 @@ def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_na
 	yaml_dict['project'] = project_name
 	yaml_dict['ngs_run'] = ngs_run
 	yaml_dict['cell_type'] = cell_type
+	ctrls_done = []
 
 	for line in input_file:
 		line = line.rstrip('\r\n')
@@ -67,6 +68,18 @@ def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_na
 		mvCommand_R2 = 'mv ' + file_list[1] + ' ' + directory_name + '/' + sample_name + '_R2.fastq.gz'
 		p = subprocess.Popen(mvCommand_R2,shell=True)
 		p.communicate()
+
+		# do this for controls
+		if control_sample not in ctrls_done:
+			path_to_check = directory_name + '/' + control_sample + '_*.fastq.gz'
+			file_list = sorted(glob.glob(path_to_check))
+			mvCommand_R1 = 'mv ' + file_list[0] + ' ' + directory_name + '/' + control_sample + '_R1.fastq.gz'
+			p = subprocess.Popen(mvCommand_R1,shell=True)
+			p.communicate()
+			mvCommand_R2 = 'mv ' + file_list[1] + ' ' + directory_name + '/' + control_sample + '_R2.fastq.gz'
+			p = subprocess.Popen(mvCommand_R2,shell=True)
+			p.communicate()
+			ctrls_done.append(control_sample)
 
 	# write final yaml file
 	with open(output_file, 'w') as yaml_file:
