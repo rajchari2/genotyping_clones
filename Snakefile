@@ -51,19 +51,37 @@ def get_expt_type(wildcards):
 	return sample_to_expt_type[wildcards.sample]
 
 # rules for genotyping
+rule flash_merge:
+	input:
+		r1 = 'data_files/{sample}_R1.fastq.gz',
+		r2 = 'data_files/{sample}_R2.fastq.gz',
+	params:
+		prefix = 'data_files/{sample}'
+	output:
+		merged = 'data_files/{sample}.extendedFrags.fastq',
+	shell:
+		'flash -M 100 -o {params.prefix} {input.r1} {input.r2}'
+
 rule bwa_mem:
 	input:
 		reference_file = get_reference,
-		r1 = 'data_files/{sample}_R1.fastq.gz',
-		r2 = 'data_files/{sample}_R2.fastq.gz',
+		merged_fastq = rules.flash_merge.output.merged
 	output:
-		sam_file = 'processed/{sample}_bwamem.sam'
+		sam = 'processed/{sample}_bwamem.sam'
 	shell:
-		'bwa index {input.reference_file} && bwa mem {input.reference_file} {input.r1} {input.r2} > {output.sam_file}'
+		'bwa index {input.reference_file} && bwa mem {input.reference_file} {input.merged_fastq} > {output.sam}'
+
+rule filter_sam:
+	input:
+		sam_file = rules.bwa_mem.output.sam
+	output:
+		filtered_sam_file = 'processed/{sample}_bwamem_filtered.sam'
+	shell:
+		'python resources/filter_sam.py -i {input.sam_file} -o {output.filtered_sam_file}'
 
 rule samtools_view:
 	input:
-		sam = rules.bwa_mem.output.sam_file,
+		sam = rules.filter_sam.output.filtered_sam_file,
 		reference_file = get_reference
 	output:
 		bam = 'processed/{sample}_bwamem.bam'
@@ -105,9 +123,10 @@ rule generate_toml_file:
 	input:
 		variant_file_list = expand(rules.count_variants.output.var_file,sample=sample_list)
 	output:
-		toml_file = 'final_output/' + project_name + '_' + ngs_run + '_genotyping.toml'
+		toml_file = 'final_output/' + project_name + '_' + ngs_run + '_genotyping.toml',
+		clone_list = 'final_output/' + project_name + '_' + ngs_run + '_clone_list.tab'
 	shell:
-		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -o {output.toml_file}'
+		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -o {output.toml_file} -c {output.clone_list}'
 
 rule visualize_plate:
 	input:
@@ -115,7 +134,8 @@ rule visualize_plate:
 	params:
 		color = 'Greys'
 	output:
-		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png'
+		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png',
+		
 	shell:
 		'bio96 -o {output.plate_map} {input.toml_file} -c {params.color}'
 
@@ -130,6 +150,7 @@ rule build_controls:
 
 rule genotype_all:
 	input:
-		plate_map = rules.visualize_plate.output.plate_map
+		plate_map = rules.visualize_plate.output.plate_map,
+		clone_list = rules.generate_toml_file.output.clone_list
 
 
