@@ -18,21 +18,28 @@ sample_to_control = defaultdict(str)
 sample_to_target_site = defaultdict(str)
 sample_to_expt_type = defaultdict(str)
 
+sample_to_coordinates = defaultdict(str)
 for sample in samples:
 	for sample_name in sample:
 		sample_list.append(sample_name)
 		ref_file = sample[sample_name]['reference']
+		target_site = sample[sample_name]['target_site']
+		control_sample = sample[sample_name]['control']
+		coordinates = sample[sample_name]['coordinates']
 		if ref_file not in reference_list:
 			reference_list.append(ref_file)
-		sample_to_reference[sample_name] = 'db/' + ref_file
+		sample_to_reference[sample_name] = ref_file
+		sample_to_coordinates[sample_name] = coordinates
+		sample_to_target_site[sample_name] = target_site
+		sample_to_control[sample_name] = control_sample
 		sample_to_vars[sample_name] = sample[sample_name]['variants']
 		sample_to_expt_type[sample_name] = sample[sample_name]['expt_type']
-		sample_to_control[sample_name] = sample[sample_name]['control']
-		sample_to_target_site[sample_name] = sample[sample_name]['target_site']
-		control_sample = sample[sample_name]['control']
+		# populate control as well
 		if control_sample not in control_list:
 			control_list.append(control_sample)
-			sample_to_reference[control_sample] = 'db/' + ref_file
+			sample_to_reference[control_sample] = ref_file
+			sample_to_target_site[control_sample] = target_site
+			sample_to_coordinates[control_sample] = coordinates
 
 # functions to get variables
 def get_reference(wildcards):
@@ -50,6 +57,9 @@ def get_variants(wildcards):
 def get_expt_type(wildcards):
 	return sample_to_expt_type[wildcards.sample]
 
+def get_coordinates(wildcards):
+	return sample_to_coordinates[wildcards.sample]
+
 # rules for genotyping
 rule flash_merge:
 	input:
@@ -62,22 +72,32 @@ rule flash_merge:
 	shell:
 		'flash -M 100 -o {params.prefix} {input.r1} {input.r2}'
 
+rule mask_seq_qual:
+	input:
+		flash_merged = rules.flash_merge.output.merged
+	output:
+		merged_filtered = 'data_files/{sample}.extendedFrags.filtered.fastq'
+	shell:
+		'python resources/mask_qual.py -i {input.flash_merged} -o {output.merged_filtered} -q 20'
+
 rule bwa_mem:
 	input:
 		reference_file = get_reference,
-		merged_fastq = rules.flash_merge.output.merged
+		merged_fastq = rules.mask_seq_qual.output.merged_filtered
 	output:
 		sam = 'processed/{sample}_bwamem.sam'
 	shell:
-		'bwa index {input.reference_file} && bwa mem {input.reference_file} {input.merged_fastq} > {output.sam}'
+		'bwa mem {input.reference_file} {input.merged_fastq} > {output.sam}'
 
 rule filter_sam:
 	input:
 		sam_file = rules.bwa_mem.output.sam
+	params:
+		coords = 'full'
 	output:
 		filtered_sam_file = 'processed/{sample}_bwamem_filtered.sam'
 	shell:
-		'python resources/filter_sam.py -i {input.sam_file} -o {output.filtered_sam_file}'
+		'python resources/filter_sam.py -i {input.sam_file} -o {output.filtered_sam_file} -c {params.coords}'
 
 rule samtools_view:
 	input:
@@ -113,11 +133,12 @@ rule count_variants:
 		expt_type = get_expt_type,
 		control = get_control_sample,
 		reference_file = get_reference,
-		target_site = get_target_site
+		target_site = get_target_site,
+		coordinates = get_coordinates
 	output:
 		var_file = 'output/{sample}_variant_summary.tab'
 	shell:
-		'python resources/genotype_sample.py -i {input.sorted_bam} -c {params.control} -e {params.expt_type} -v {params.variant_list} -o {output.var_file} -r {params.reference_file} -t {params.target_site}'
+		'python resources/genotype_sample.py -i {input.sorted_bam} -c {params.control} -e {params.expt_type} -v {params.variant_list} -o {output.var_file} -r {params.reference_file} -t {params.target_site} -p {params.coordinates}'
 
 rule generate_toml_file:
 	input:

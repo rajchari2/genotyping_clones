@@ -48,15 +48,26 @@ def process_cigar(cigar_tuple,md_tag,aligned_pairs,query_qualities):
 				alterations.append(alt)
 	return alterations
 
-def find_target_indices(target_site,reference_file):
+def find_target_indices(target_site,reference_file,coordinates):
+	# store reference sequence
 	# store reference sequence
 	refDB = defaultdict(str)
 	targetDB = defaultdict(str)
 	gene = ''
+	if coordinates != 'full':
+		chrom,pos = coordinates.split(':')
+		start,end = pos.split('-')
 	for record in SeqIO.parse(reference_file,'fasta'):
-		refDB[str(record.id)] = str(record.seq)
-		targetDB[str(record.id)] = target_site
-		gene = str(record.id)
+		if coordinates=='full':
+			refDB[str(record.id)] = str(record.seq)
+			targetDB[str(record.id)] = target_site
+			gene = str(record.id)
+			break
+		elif chrom==str(record.id):
+			refDB[str(record.id)] = str(record.seq)[int(start):int(end)]
+			targetDB[str(record.id)] = target_site
+			gene = str(record.id)
+			break
 
 	# identify the target site start and end
 	targetSeq = targetDB[gene].upper()
@@ -81,7 +92,7 @@ def find_target_indices(target_site,reference_file):
 
 
 
-def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site,reference_file,output_file):
+def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site,reference_file,coordinates,output_file):
 	# read the sorted bam file
 	samfile = pysam.AlignmentFile(bam_file,"rb")
 	# go through control file to determine "false" mutations
@@ -151,12 +162,20 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site
 		control_cigar_strings = []
 
 		# get the start and end indexes of the target in the reference
-		target_start,target_end,gene = find_target_indices(target_site,reference_file)
+		target_start,target_end,gene = find_target_indices(target_site,reference_file,coordinates)
+
+		# get reference position
+		if coordinates=='full':
+			ref_pos = 0
+		else:
+			chrom,pos = coordinates.split(':')
+			start,end = pos.split('-')
+			ref_pos = int(start)-1
 
 		# write header in output file
 		output_file.write('Sample\tNHEJ_Mutation_Rate\n')
 		for read in control_sam_file.fetch():
-			if read.cigarstring != None and 'S' not in read.cigarstring and 'H' not in read.cigarstring and int(read.reference_start)==0:
+			if read.cigarstring != None and 'S' not in read.cigarstring and 'H' not in read.cigarstring and int(read.reference_start)==ref_pos:
 				# check if the read has a mutation that involves the target sequence
 				md_tag = read.get_tag('MD')
 				ctrl_alterations = process_cigar(read.cigartuples,md_tag,read.get_aligned_pairs(with_seq=True),read.query_qualities)
@@ -175,7 +194,7 @@ def genotype_sample(bam_file,control_bam_file,expt_type,variant_list,target_site
 
 		# go through sample BAM file
 		for read in samfile.fetch():
-			if read.cigarstring != None and 'S' not in read.cigarstring and 'H' not in read.cigarstring and int(read.reference_start)==0:
+			if read.cigarstring != None and 'S' not in read.cigarstring and 'H' not in read.cigarstring and int(read.reference_start)==ref_pos:
 				sample_read_total += 1
 				md_tag = read.get_tag('MD')
 				sample_alterations = process_cigar(read.cigartuples,md_tag,read.get_aligned_pairs(with_seq=True),read.query_qualities)
@@ -211,9 +230,10 @@ def main(argv):
 	parser.add_argument('-v','--variant_list',required=True)
 	parser.add_argument('-t','--target_site',required=True)
 	parser.add_argument('-r','--reference_file',required=True)
+	parser.add_argument('-p','--coordinates',required=True)
 	parser.add_argument('-o','--output_file',type=argparse.FileType('w'),required=True)
 	opts = parser.parse_args(argv)
-	genotype_sample(opts.sample_bam_file, opts.control_bam_file, opts.experiment_type, opts.variant_list, opts.target_site, opts.reference_file, opts.output_file)
+	genotype_sample(opts.sample_bam_file, opts.control_bam_file, opts.experiment_type, opts.variant_list, opts.target_site, opts.reference_file, opts.coordinates, opts.output_file)
 
 if __name__ == '__main__':
 	main(sys.argv[1:])

@@ -35,20 +35,23 @@ def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_na
 	for line in input_file:
 		line = line.rstrip('\r\n')
 		parts = line.split('\t')
+		#print(line)
 
 		# variables to store fields
 		sample_name = parts[0]
 		reference_file = parts[1]
-		target_site = parts[2]
-		expt_type = parts[3]
-		variant_list = parts[4]
-		control_sample = parts[5]
+		coordinates = parts[2]
+		target_site = parts[3]
+		expt_type = parts[4]
+		variant_list = parts[5]
+		control_sample = parts[6]
 
 		# save to the yaml
 		sample_dict = {}
 		sample_dict[sample_name] = {}
 		sample_dict[sample_name]['name'] = sample_name
 		sample_dict[sample_name]['reference'] = reference_file
+		sample_dict[sample_name]['coordinates'] = coordinates
 		sample_dict[sample_name]['target_site'] = target_site
 		sample_dict[sample_name]['expt_type'] = expt_type
 		sample_dict[sample_name]['variants'] = variant_list
