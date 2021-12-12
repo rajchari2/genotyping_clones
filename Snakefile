@@ -3,12 +3,14 @@
 import snakemake
 import os
 from collections import defaultdict
+import wellmap
 
 # get all of the samples
 samples = config["samples"]
 project_name = config["project"]
 cell_type = config["cell_type"]
 ngs_run = config["ngs_run"]
+global_expt_type = config["expt_type"]
 sample_list = []
 reference_list = []
 control_list = []
@@ -72,18 +74,18 @@ rule flash_merge:
 	shell:
 		'flash -M 100 -o {params.prefix} {input.r1} {input.r2}'
 
-rule mask_seq_qual:
-	input:
-		flash_merged = rules.flash_merge.output.merged
-	output:
-		merged_filtered = 'data_files/{sample}.extendedFrags.filtered.fastq'
-	shell:
-		'python resources/mask_qual.py -i {input.flash_merged} -o {output.merged_filtered} -q 20'
+# rule mask_seq_qual:
+# 	input:
+# 		flash_merged = rules.flash_merge.output.merged
+# 	output:
+# 		merged_filtered = 'data_files/{sample}.extendedFrags.filtered.fastq'
+# 	shell:
+# 		'python resources/mask_qual.py -i {input.flash_merged} -o {output.merged_filtered} -q 20'
 
 rule bwa_mem:
 	input:
 		reference_file = get_reference,
-		merged_fastq = rules.mask_seq_qual.output.merged_filtered
+		merged_fastq = rules.flash_merge.output.merged
 	output:
 		sam = 'processed/{sample}_bwamem.sam'
 	shell:
@@ -143,23 +145,25 @@ rule count_variants:
 rule generate_toml_file:
 	input:
 		variant_file_list = expand(rules.count_variants.output.var_file,sample=sample_list)
+	params:
+		expt_type = global_expt_type
 	output:
 		toml_file = 'final_output/' + project_name + '_' + ngs_run + '_genotyping.toml',
 		clone_list = 'final_output/' + project_name + '_' + ngs_run + '_clone_list.tab',
 		aggregated_output = 'final_output/' + project_name + '_' + ngs_run + '_aggregated.tab',
 	shell:
-		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -o {output.toml_file} -c {output.clone_list} -a {output.aggregated_output}'
+		'python resources/aggregate_genotypes.py -i {input.variant_file_list} -e {params.expt_type} -o {output.toml_file} -c {output.clone_list} -a {output.aggregated_output}'
 
 rule visualize_plate:
 	input:
 		toml_file = rules.generate_toml_file.output.toml_file
 	params:
-		color = 'Greys'
+		color = 'Paired'
 	output:
 		plate_map = 'final_output/' + project_name + '_' + ngs_run + '_clonotyping_plot.png',
 		
 	shell:
-		'bio96 -o {output.plate_map} {input.toml_file} -c {params.color}'
+		'wellmap -o {output.plate_map} {input.toml_file} -c {params.color}'
 
 rule build_controls:
 	input:

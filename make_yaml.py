@@ -1,3 +1,5 @@
+# Author: Raj Chari
+# Date: November 1st, 2021
 # script to make a yaml file from a tab-delimited sample file
 # in the following order
 # Sample name: in the format of 'Plate-Well-Gene'
@@ -5,14 +7,9 @@
 # sgRNA target site: target site for the CRISPR experiment
 # Experiment type: HDR/KO
 # if HDR: variants (semicolon delimited, no spaces), else NA
+# SNP A>B:chr:position; Insertion: Ins-AAC:chr:position; Deletion: Del-AAA:chr:position
 # Control sample: PCR product from an untreated sample (or appropriate control)
-
-
-
-
 # output file: yaml file which can run in the pipeline
-
-# input file for genotyping: sample name {tab} reference {SNP diffs ; delimited A1008T}
 
 # import appropriate libraries
 import yaml
@@ -23,13 +20,14 @@ import glob
 import subprocess
 from collections import defaultdict
 
-def makeYAML (input_file,project_name,ngs_run,cell_type,output_file,directory_name):
+def makeYAML (input_file,project_name,ngs_run,cell_type,expt_type,output_file,directory_name):
 	# dictionary to hold yaml
 	yaml_dict = {}
 	yaml_dict['samples'] = []
 	yaml_dict['project'] = project_name
 	yaml_dict['ngs_run'] = ngs_run
 	yaml_dict['cell_type'] = cell_type
+	yaml_dict['expt_type'] = expt_type
 	ctrls_done = []
 
 	for line in input_file:
@@ -99,9 +97,10 @@ def main(argv):
 	parser.add_argument('-n','--ngs_run',required=True)
 	parser.add_argument('-c','--cell_type',required=True)
 	parser.add_argument('-d','--directory_name',required=True)
+	parser.add_argument('-e','--expt_type',required=True)
 	parser.add_argument('-o','--output_file',required=True)
 	opts = parser.parse_args(argv)
-	makeYAML(opts.input_file,opts.project_name,opts.ngs_run,opts.cell_type,opts.output_file,opts.directory_name)
+	makeYAML(opts.input_file,opts.project_name,opts.ngs_run,opts.cell_type,opts.expt_type,opts.output_file,opts.directory_name)
  
 if __name__ == '__main__':
 	main(sys.argv[1:])
